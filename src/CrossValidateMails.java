@@ -1,39 +1,22 @@
+import com.aliasi.classify.*;
 import com.aliasi.corpus.XValidatingObjectCorpus;
-
-import com.aliasi.classify.Classified;
-import com.aliasi.classify.JointClassifierEvaluator;
-import com.aliasi.classify.JointClassifier;
-import com.aliasi.classify.Classification;
-import com.aliasi.classify.ConfusionMatrix;
-import com.aliasi.classify.DynamicLMClassifier;
-import com.aliasi.classify.JointClassification;
-import com.aliasi.classify.LMClassifier;
-
 import com.aliasi.lm.NGramProcessLM;
-
 import com.aliasi.util.AbstractExternalizable;
 import com.aliasi.util.Files;
 
 import java.io.File;
 import java.io.IOException;
-
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
-public class CrossValidateNews {
+public class CrossValidateMails {
 
 	private static File TRAINING_DIR
-			= new File("../../data/fourNewsGroups/4news-train");
+			= new File("C:\\Studium Informatik\\11.FS\\Text Analytics\\A6_SpamFilter\\mailData2\\mailData\\train");//("../../data/fourNewsGroups/4news-train");
 
 	private static File TESTING_DIR
-			=  new File("../../data/fourNewsGroups/4news-test");
+			=  new File("C:\\Studium Informatik\\11.FS\\Text Analytics\\A6_SpamFilter\\mailData2\\mailData\\test");//("../../data/fourNewsGroups/4news-test");
 
-	private static String[] CATEGORIES
-			= { "soc.religion.christian",
-			"talk.religion.misc",
-			"alt.atheism",
-			"misc.forsale" };
+	private static String[] CATEGORIES = {"mailham", "mailspam"};
 
 	private static int NGRAM_SIZE = 6;
 
@@ -50,7 +33,7 @@ public class CrossValidateNews {
 		for (String category : CATEGORIES) {
 			Classification c = new Classification(category);
 
-			File trainCatDir = new File(TRAINING_DIR,category);
+			File trainCatDir = new File(TRAINING_DIR, category);
 			for (File trainingFile : trainCatDir.listFiles()) {
 				String text = Files.readFromFile(trainingFile,"ISO-8859-1");
 				Classified<CharSequence> classified
@@ -91,9 +74,10 @@ public class CrossValidateNews {
 					CATEGORIES,
 					storeInputs);
 			corpus.visitTest(evaluator);
-			System.out.printf("%5d  %4.2f +/- %4.2f\n", fold,
-					evaluator.confusionMatrix().totalAccuracy(),
-					evaluator.confusionMatrix().confidence95());
+			//System.out.printf("%5d  %4.2f +/- %4.2f\n", fold,
+			//		evaluator.confusionMatrix().totalAccuracy(),
+			//		evaluator.confusionMatrix().confidence95());
+			System.out.printf("%5d          %4.2f \n", fold, evaluator.confusionMatrix().macroAvgFMeasure());
 		}
 
 	}

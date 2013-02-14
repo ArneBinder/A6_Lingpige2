@@ -5,7 +5,7 @@ import com.aliasi.util.Files;
 
 import java.io.*;
 
-public class ClassifyNews {
+public class ClassifyMails {
 
 	private static String[] CATEGORIES = {"SPAM", "NOSPAM"};
 
@@ -76,7 +76,7 @@ public class ClassifyNews {
 				String text = Files.readFromFile(new File(classDir, testingFiles[j]), "ISO-8859-1");
 				JointClassification jc = compiledClassifier.classify(text);
 				String bestCategory = jc.bestCategory();
-				//String details = jc.toString();
+
 				bw.write(testingFiles[j] + "\t" + bestCategory+"\n");
 
 			}
