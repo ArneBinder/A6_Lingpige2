@@ -1,50 +1,32 @@
 
 import com.aliasi.classify.*;
 import com.aliasi.lm.NGramProcessLM;
-import com.aliasi.util.AbstractExternalizable;
 import com.aliasi.util.Files;
 
 import java.io.*;
 
 public class ClassifyNews {
 
-	private static File[] TRAINING_DIR
-			//= new File("../../data/fourNewsGroups/4news-train");
-	        //= new File("C:\\Users\\Arne\\Developing\\lib\\lingpipe-4.1.0\\demos\\data\\fourNewsGroups - Kopie\\4news-train");
-	        = {new File("C:\\Studium Informatik\\11.FS\\Text Analytics\\A6_SpamFilter\\mailData\\train"),
-			new File("C:\\Studium Informatik\\11.FS\\Text Analytics\\A6_SpamFilter\\mailData\\train")};
-
-	private static File TRAIN_HAM = new File("");
-	private static File TRAIN_SPAM = new File("");
-
-	private static File TESTING_DIR
-			//=  new File("../../data/fourNewsGroups/4news-test");
-			//=  new File("C:\\Users\\Arne\\Developing\\lib\\lingpipe-4.1.0\\demos\\data\\fourNewsGroups - Kopie\\4news-test");
-			= new File("C:\\Studium Informatik\\11.FS\\Text Analytics\\A6_SpamFilter\\mailData\\test");
-
-	private static String[] CATEGORIES
-			/*= { "soc.religion.christian",
-			"talk.religion.misc",
-			"alt.atheism",
-			"misc.forsale" };*/
-			= {"mailspam", "mailham"};
+	private static String[] CATEGORIES = {"SPAM", "NOSPAM"};
 
 	private static int NGRAM_SIZE = 6;
 
 	public static void main(String[] args)
 			throws ClassNotFoundException, IOException {
 
-		DynamicLMClassifier<NGramProcessLM> classifier
-				= DynamicLMClassifier.createNGramProcess(CATEGORIES, NGRAM_SIZE);
+		DynamicLMClassifier<NGramProcessLM> classifier;
 
-		if (args[0].equals("learn"))
-		{
-			TRAINING_DIR[1] = new File(args[2]);
-			TRAINING_DIR[0] = new File(args[1]);
 
-			for(int i = 0; i < CATEGORIES.length; ++i)
-			{
-				File classDir = TRAINING_DIR[i];
+		if (args[0].equals("learn")) {
+			classifier = DynamicLMClassifier.createNGramProcess(CATEGORIES, NGRAM_SIZE);
+
+			File[] trainingDir = new File[CATEGORIES.length];
+
+			trainingDir[1] = new File(args[2]);
+			trainingDir[0] = new File(args[1]);
+
+			for (int i = 0; i < CATEGORIES.length; ++i) {
+				File classDir = trainingDir[i];
 				if (!classDir.isDirectory()) {
 					String msg = "Could not find training directory="
 							+ classDir
@@ -55,63 +37,51 @@ public class ClassifyNews {
 
 				String[] trainingFiles = classDir.list();
 				for (int j = 0; j < trainingFiles.length; ++j) {
-					File file = new File(classDir,trainingFiles[j]);
-					String text = Files.readFromFile(file,"ISO-8859-1");
+					File file = new File(classDir, trainingFiles[j]);
+					String text = Files.readFromFile(file, "ISO-8859-1");
 					System.out.println("Training on " + CATEGORIES[i] + "/" + trainingFiles[j]);
 					Classification classification = new Classification(CATEGORIES[i]);
-					Classified<CharSequence> classified = new Classified<CharSequence>(text,classification);
+					Classified<CharSequence> classified = new Classified<CharSequence>(text, classification);
 					classifier.handle(classified);
 				}
-
-				DataOutputStream outputStream;
-				outputStream = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(new File(CATEGORIES[i]+".model"))));
-				classifier.languageModel(CATEGORIES[i]).writeTo(outputStream);
 			}
+			System.out.println("Schreibe Model ");
 
-		}
-		else
-		if (args[0].equals("classify"))
-		{
-			TESTING_DIR = new File(args[1]);
+			FileOutputStream fos = new FileOutputStream(new File("model"));
+			ObjectOutputStream objectOutputStream = new ObjectOutputStream(fos);
+			classifier.compileTo(objectOutputStream);
 
-			//classifier.languageModel(CATEGORIES[0]).
+		} else if (args[0].equals("classify")) {
+			//TESTING_DIR = ;
+
+			File modelFile = new File("model");
+			System.out.println("Lese Model " + modelFile);
+			FileInputStream fileIn = new FileInputStream(modelFile);
+			ObjectInputStream objIn = new ObjectInputStream(fileIn);
+
+
 			//compiling
 			System.out.println("Compiling");
-			@SuppressWarnings("unchecked") // we created object so know it's safe
+			@SuppressWarnings("unchecked")
 					JointClassifier<CharSequence> compiledClassifier
-					= (JointClassifier<CharSequence>) AbstractExternalizable.compile(classifier);
+					= (JointClassifier<CharSequence>) objIn.readObject();
+			objIn.close();
 
-			boolean storeCategories = true;
-			JointClassifierEvaluator<CharSequence> evaluator
-					= new JointClassifierEvaluator<CharSequence>(compiledClassifier,
-					CATEGORIES,
-					storeCategories);
-			for(int i = 0; i < CATEGORIES.length; ++i) {
-				File classDir = new File(TESTING_DIR, CATEGORIES[i]);
-				String[] testingFiles = classDir.list();
-				for (int j = 0; j < testingFiles.length; ++j) {
-					String text = Files.readFromFile(new File(classDir, testingFiles[j]), "ISO-8859-1");
-					System.out.print("Testing on " + CATEGORIES[i] + "/" + testingFiles[j] + " ");
-					Classification classification = new Classification(CATEGORIES[i]);
-					Classified<CharSequence> classified = new Classified<CharSequence>(text, classification);
-					evaluator.handle(classified);
-					JointClassification jc = compiledClassifier.classify(text);
-					String bestCategory = jc.bestCategory();
-					String details = jc.toString();
-					System.out.println("Got best category of: " + bestCategory);
-					System.out.println(jc.toString());
-					System.out.println("---------------");
-				}
+			BufferedWriter bw = new BufferedWriter(new FileWriter(new File(args[2])));
+
+			File classDir = new File(args[1]);
+			String[] testingFiles = classDir.list();
+			for (int j = 0; j < testingFiles.length; ++j)
+			{
+				String text = Files.readFromFile(new File(classDir, testingFiles[j]), "ISO-8859-1");
+				JointClassification jc = compiledClassifier.classify(text);
+				String bestCategory = jc.bestCategory();
+				//String details = jc.toString();
+				bw.write(testingFiles[j] + "\t" + bestCategory+"\n");
+
 			}
-
-			ConfusionMatrix confMatrix = evaluator.confusionMatrix();
-			System.out.println("Total Accuracy: " + confMatrix.totalAccuracy());
-
-			System.out.println("\nFULL EVAL");
-			System.out.println(evaluator);
+			bw.flush();
+			bw.close();
 		}
-
-
-
 	}
 }
