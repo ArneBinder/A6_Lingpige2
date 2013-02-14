@@ -5,6 +5,7 @@ import com.aliasi.util.Files;
 
 import java.io.*;
 
+
 public class ClassifyMails {
 
 	private static String[] CATEGORIES = {"SPAM", "NOSPAM"};
